@@ -211,41 +211,57 @@
     el.innerText = texto;
   }
 
-  async function entregarArquivo(blob, nomeArquivo) {
-    const file = new File([blob], nomeArquivo, { type: blob.type });
+ async function entregarArquivo(blob, nomeArquivo) {
     const blobUrl = URL.createObjectURL(blob);
+    
+    // Atualiza a caixa na tela
+    const box = document.getElementById('download-box');
+    const link = document.getElementById('download-link');
+    box.style.display = 'block';
+    link.download = nomeArquivo;
+    link.href = blobUrl;
+    link.innerText = `📥 Baixar ${nomeArquivo}`;
 
-    // 1. Converte para Base64 para garantir visualização direta em qualquer celular
+    // 1. Converte o arquivo para Base64
     const reader = new FileReader();
     reader.readAsDataURL(blob);
     reader.onloadend = function () {
-      const base64data = reader.result;
+      const base64Data = reader.result;
 
-      // 2. Atualiza a caixinha com botão fixo na tela
-      const box = document.getElementById('download-box');
-      const link = document.getElementById('download-link');
-      
-      // Cria link direto para abrir no navegador do sistema
-      link.href = base64data;
-      link.download = nomeArquivo;
-      link.innerText = `👁️ Abrir / Salvar: ${nomeArquivo}`;
+      // Cria um link temporário para visualização/download direto
       link.onclick = function(e) {
-        // Se estiver dentro da janela do Telegram, tenta abrir no navegador externo do celular
-        if (window.Telegram?.WebApp) {
-          window.Telegram.WebApp.openLink(blobUrl);
+        // Se estiver rodando dentro do Telegram (celular)
+        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+          e.preventDefault();
+          
+          // Abre um visualizador HTML limpo fora do app do Telegram
+          const viewerHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta name="viewport" content="width=device-width,initial-scale=1">
+              <title>${nomeArquivo}</title>
+              <style>
+                body { margin:0; font-family:sans-serif; text-align:center; padding:20px; background:#f4f6f9; }
+                .btn { display:inline-block; padding:12px 20px; background:#2563eb; color:#fff; text-decoration:none; border-radius:8px; font-weight:bold; margin-bottom:15px; }
+                iframe { width:100%; height:80vh; border:none; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
+              </style>
+            </head>
+            <body>
+              <a class="btn" href="${base64Data}" download="${nomeArquivo}">💾 Salvar no Dispositivo</a>
+              <iframe src="${base64Data}"></iframe>
+            </body>
+            </html>
+          `;
+          
+          const pageBlob = new Blob([viewerHtml], { type: 'text/html' });
+          const pageUrl = URL.createObjectURL(pageBlob);
+          window.Telegram.WebApp.openLink(pageUrl, { try_instant_view: false });
+          return;
         }
       };
-      box.style.display = 'block';
 
-      // 3. Tenta disparar a abertura direta em nova guia
-      const win = window.open();
-      if (win) {
-        win.document.write(
-          `<iframe src="${base64data}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`
-        );
-      }
-
-      msg('✅ Arquivo gerado! Toque no botão azul abaixo para abrir e salvar.');
+      msg('✅ Processado! Toque no botão azul abaixo para salvar.');
     };
   }
 
