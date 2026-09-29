@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PDF Tools Pro</title>
 
-  <!-- Bibliotecas estáveis e Leitor de Word (Mammoth) -->
+  <!-- Bibliotecas para PDF, Word, Excel e Telegram WebApp -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -49,12 +50,12 @@
     .status-err { background: #fee2e2; color: #b91c1c; }
 
     #download-box {
-      display: none; margin-top: 14px; padding: 12px; border: 2px dashed #2563eb;
+      display: none; margin-top: 14px; padding: 14px; border: 2px dashed #2563eb;
       background: #eff6ff; border-radius: 8px; text-align: center;
     }
-    #download-box a {
-      display: inline-block; margin-top: 6px; padding: 9px 14px; background: #2563eb;
-      color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 0.85rem;
+    #download-link {
+      display: inline-block; margin-top: 6px; padding: 10px 16px; background: #2563eb;
+      color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 0.9rem;
     }
   </style>
 </head>
@@ -63,11 +64,10 @@
 <div class="card">
   <h2>🛠️ PDF Tools Hub</h2>
 
-  <!-- Barra de Abas Rolável -->
   <div class="tabs">
     <button class="tab-btn active" onclick="openTab(event, 'tab-unlock')">🔓 Unlock</button>
     <button class="tab-btn" onclick="openTab(event, 'tab-merge')">📑 Juntar</button>
-    <button class="tab-btn" onclick="openTab(event, 'tab-split')">✂️ Dividir</button>
+    <button class="tab-btn" onclick="openTab(event, 'tab-split')">✂️️ Dividir</button>
     <button class="tab-btn" onclick="openTab(event, 'tab-word')">📄 PDF ➔ Word</button>
     <button class="tab-btn" onclick="openTab(event, 'tab-word2pdf')">📝 Word ➔ PDF</button>
     <button class="tab-btn" onclick="openTab(event, 'tab-excel')">📊 Excel</button>
@@ -118,7 +118,7 @@
       <label>Arquivo PDF para transformar em Word:</label>
       <input type="file" id="word-file" accept="application/pdf">
     </div>
-    <button class="action btn-blue" onclick="execPdfToWord()">Exportar para Documento Word (.doc)</button>
+    <button class="action btn-blue" onclick="execPdfToWord()">Exportar para Word (.doc)</button>
   </div>
 
   <!-- 5. WORD (.DOCX) PARA PDF -->
@@ -142,10 +142,10 @@
   <!-- 7. IMAGENS ➔ PDF -->
   <div id="tab-img2pdf" class="panel">
     <div class="field">
-      <label>Selecione fotos ou imagens (JPG, PNG):</label>
+      <label>Selecione fotos (JPG, PNG):</label>
       <input type="file" id="img-files" accept="image/jpeg, image/png" multiple>
     </div>
-    <button class="action btn-purple" onclick="execImgToPdf()">Criar PDF a partir das Imagens</button>
+    <button class="action btn-purple" onclick="execImgToPdf()">Criar PDF das Imagens</button>
   </div>
 
   <!-- 8. PDF ➔ IMAGENS -->
@@ -183,9 +183,15 @@
 
   <div id="status"></div>
 
+  <!-- Caixa de Download / Abertura -->
   <div id="download-box">
-    <span id="download-text">Arquivo pronto!</span><br>
+    <span id="download-text" style="font-weight:600; color:#1e293b;">Arquivo pronto!</span><br>
     <a id="download-link" href="#" target="_blank">📥 Baixar Arquivo</a>
+    <div style="margin-top:12px;">
+      <button onclick="forcarAbrirNoChrome()" style="background:#475569; color:white; border:none; padding:8px 12px; border-radius:6px; font-size:0.8rem; cursor:pointer;">
+        🌐 Abrir no Navegador (Chrome)
+      </button>
+    </div>
   </div>
 </div>
 
@@ -211,58 +217,44 @@
     el.innerText = texto;
   }
 
- async function entregarArquivo(blob, nomeArquivo) {
-    const blobUrl = URL.createObjectURL(blob);
-    
-    // Atualiza a caixa na tela
+  async function entregarArquivo(blob, nomeArquivo) {
+    const url = URL.createObjectURL(blob);
     const box = document.getElementById('download-box');
     const link = document.getElementById('download-link');
-    box.style.display = 'block';
+    
+    link.href = url;
     link.download = nomeArquivo;
-    link.href = blobUrl;
     link.innerText = `📥 Baixar ${nomeArquivo}`;
+    box.style.display = 'block';
 
-    // 1. Converte o arquivo para Base64
-    const reader = new FileReader();
-    reader.readAsDataURL(blob);
-    reader.onloadend = function () {
-      const base64Data = reader.result;
+    if (navigator.canShare && navigator.canShare({ files: [new File([blob], nomeArquivo, { type: blob.type })] })) {
+      try {
+        await navigator.share({
+          files: [new File([blob], nomeArquivo, { type: blob.type })],
+          title: nomeArquivo
+        });
+        msg('✅ Arquivo pronto!');
+        return;
+      } catch (err) {}
+    }
 
-      // Cria um link temporário para visualização/download direto
-      link.onclick = function(e) {
-        // Se estiver rodando dentro do Telegram (celular)
-        if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
-          e.preventDefault();
-          
-          // Abre um visualizador HTML limpo fora do app do Telegram
-          const viewerHtml = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <meta name="viewport" content="width=device-width,initial-scale=1">
-              <title>${nomeArquivo}</title>
-              <style>
-                body { margin:0; font-family:sans-serif; text-align:center; padding:20px; background:#f4f6f9; }
-                .btn { display:inline-block; padding:12px 20px; background:#2563eb; color:#fff; text-decoration:none; border-radius:8px; font-weight:bold; margin-bottom:15px; }
-                iframe { width:100%; height:80vh; border:none; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.1); }
-              </style>
-            </head>
-            <body>
-              <a class="btn" href="${base64Data}" download="${nomeArquivo}">💾 Salvar no Dispositivo</a>
-              <iframe src="${base64Data}"></iframe>
-            </body>
-            </html>
-          `;
-          
-          const pageBlob = new Blob([viewerHtml], { type: 'text/html' });
-          const pageUrl = URL.createObjectURL(pageBlob);
-          window.Telegram.WebApp.openLink(pageUrl, { try_instant_view: false });
-          return;
-        }
-      };
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nomeArquivo;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 
-      msg('✅ Processado! Toque no botão azul abaixo para salvar.');
-    };
+    msg('✅ Concluído! Se o arquivo não baixou, use o botão cinza abaixo para abrir no Chrome.');
+  }
+
+  function forcarAbrirNoChrome() {
+    const siteUrl = 'https://lucidiojf.github.io/pdf-tools/index.html';
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+      window.Telegram.WebApp.openLink(siteUrl, { try_instant_view: false });
+    } else {
+      window.open(siteUrl, '_system');
+    }
   }
 
   // 1. UNLOCK
@@ -404,7 +396,6 @@
   }
 
   // 5. WORD (.DOCX) PARA PDF
- // 5. WORD (.DOCX) PARA PDF (COM SANITIZAÇÃO DE CARACTERES)
   async function execWordToPdf() {
     const input = document.getElementById('word2pdf-file');
     if (!input.files.length) return msg('Selecione um arquivo .docx do Word.', false);
@@ -413,7 +404,6 @@
       msg('Lendo arquivo Word e gerando PDF...');
       const buffer = await input.files[0].arrayBuffer();
 
-      // Extrai o texto do .docx usando Mammoth
       const result = await mammoth.extractRawText({ arrayBuffer: buffer });
       let fullText = result.value || '';
 
@@ -421,21 +411,20 @@
         return msg('O arquivo Word está vazio ou contém apenas imagens não processáveis.', false);
       }
 
-      // LIMPEZA: substitui tabulações (0x0009) por 4 espaços e remove caracteres fora da tabela WinAnsi
       fullText = fullText
         .replace(/\t/g, '    ')
-        .replace(/[\u2018\u2019]/g, "'") // aspas curvas simples
-        .replace(/[\u201C\u201D]/g, '"') // aspas curvas duplas
-        .replace(/[\u2013\u2014]/g, '-') // travessões
-        .replace(/[^\x20-\x7E\xA0-\xFF\n\r]/g, ' '); // remove qualquer caractere que não pertença a WinAnsi
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2013\u2014]/g, '-')
+        .replace(/[^\x20-\x7E\xA0-\xFF\n\r]/g, ' ');
 
       const pdfDoc = await PDFLib.PDFDocument.create();
       const font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
       const fontSize = 11;
       const lineHeight = 16;
       const margin = 40;
-      const pageWidth = 595.28;  // A4
-      const pageHeight = 841.89; // A4
+      const pageWidth = 595.28;
+      const pageHeight = 841.89;
       const maxLineWidth = pageWidth - (margin * 2);
 
       let page = pdfDoc.addPage([pageWidth, pageHeight]);
