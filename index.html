@@ -377,6 +377,7 @@
   }
 
   // 5. WORD (.DOCX) PARA PDF
+ // 5. WORD (.DOCX) PARA PDF (COM SANITIZAÇÃO DE CARACTERES)
   async function execWordToPdf() {
     const input = document.getElementById('word2pdf-file');
     if (!input.files.length) return msg('Selecione um arquivo .docx do Word.', false);
@@ -385,13 +386,21 @@
       msg('Lendo arquivo Word e gerando PDF...');
       const buffer = await input.files[0].arrayBuffer();
 
-      // Extrai o texto formatado do .docx usando Mammoth
+      // Extrai o texto do .docx usando Mammoth
       const result = await mammoth.extractRawText({ arrayBuffer: buffer });
-      const fullText = result.value || '';
+      let fullText = result.value || '';
 
       if (!fullText.trim()) {
         return msg('O arquivo Word está vazio ou contém apenas imagens não processáveis.', false);
       }
+
+      // LIMPEZA: substitui tabulações (0x0009) por 4 espaços e remove caracteres fora da tabela WinAnsi
+      fullText = fullText
+        .replace(/\t/g, '    ')
+        .replace(/[\u2018\u2019]/g, "'") // aspas curvas simples
+        .replace(/[\u201C\u201D]/g, '"') // aspas curvas duplas
+        .replace(/[\u2013\u2014]/g, '-') // travessões
+        .replace(/[^\x20-\x7E\xA0-\xFF\n\r]/g, ' '); // remove qualquer caractere que não pertença a WinAnsi
 
       const pdfDoc = await PDFLib.PDFDocument.create();
       const font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
@@ -405,8 +414,7 @@
       let page = pdfDoc.addPage([pageWidth, pageHeight]);
       let currentY = pageHeight - margin;
 
-      // Quebra o texto por parágrafos e linhas para caber na página A4
-      const paragraphs = fullText.split('\n');
+      const paragraphs = fullText.split(/\r?\n/);
 
       for (let para of paragraphs) {
         para = para.trim();
@@ -419,8 +427,7 @@
           continue;
         }
 
-        // Divide o parágrafo em linhas menores que cabem na largura
-        const words = para.split(' ');
+        const words = para.split(/\s+/);
         let currentLine = '';
 
         for (let word of words) {
