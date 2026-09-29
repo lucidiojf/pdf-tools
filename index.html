@@ -5,15 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PDF Tools Pro</title>
 
-  <!-- Bibliotecas estáveis -->
+  <!-- Bibliotecas estáveis e Leitor de Word (Mammoth) -->
   <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #f1f5f9; display: flex; justify-content: center; padding: 20px 14px; margin: 0; }
-    .card { background: #ffffff; width: 100%; max-width: 540px; padding: 20px; border-radius: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); }
+    .card { background: #ffffff; width: 100%; max-width: 560px; padding: 20px; border-radius: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); }
     h2 { margin-top: 0; color: #0f172a; text-align: center; font-size: 1.25rem; }
 
     .tabs { display: flex; gap: 6px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 6px; }
@@ -60,14 +61,15 @@
 <body>
 
 <div class="card">
-  <h2>🛠️️ PDF Tools Hub</h2>
+  <h2>🛠️ PDF Tools Hub</h2>
 
   <!-- Barra de Abas Rolável -->
   <div class="tabs">
     <button class="tab-btn active" onclick="openTab(event, 'tab-unlock')">🔓 Unlock</button>
     <button class="tab-btn" onclick="openTab(event, 'tab-merge')">📑 Juntar</button>
-    <button class="tab-btn" onclick="openTab(event, 'tab-split')">✂ Dividir</button>
-    <button class="tab-btn" onclick="openTab(event, 'tab-word')">📄 Word</button>
+    <button class="tab-btn" onclick="openTab(event, 'tab-split')">✂️ Dividir</button>
+    <button class="tab-btn" onclick="openTab(event, 'tab-word')">📄 PDF ➔ Word</button>
+    <button class="tab-btn" onclick="openTab(event, 'tab-word2pdf')">📝 Word ➔ PDF</button>
     <button class="tab-btn" onclick="openTab(event, 'tab-excel')">📊 Excel</button>
     <button class="tab-btn" onclick="openTab(event, 'tab-img2pdf')">🖼️ Img ➔ PDF</button>
     <button class="tab-btn" onclick="openTab(event, 'tab-pdf2img')">📄 PDF ➔ Img</button>
@@ -110,7 +112,7 @@
     <button class="action btn-orange" onclick="execSplit()">Extrair Páginas</button>
   </div>
 
-  <!-- 4. PDF PARA WORD (.DOC) GARANTIDO -->
+  <!-- 4. PDF PARA WORD (.DOC) -->
   <div id="tab-word" class="panel">
     <div class="field">
       <label>Arquivo PDF para transformar em Word:</label>
@@ -119,7 +121,16 @@
     <button class="action btn-blue" onclick="execPdfToWord()">Exportar para Documento Word (.doc)</button>
   </div>
 
-  <!-- 5. PDF PARA EXCEL -->
+  <!-- 5. WORD (.DOCX) PARA PDF -->
+  <div id="tab-word2pdf" class="panel">
+    <div class="field">
+      <label>Arquivo Word (.docx):</label>
+      <input type="file" id="word2pdf-file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+    </div>
+    <button class="action btn-blue" onclick="execWordToPdf()">Converter Word em PDF</button>
+  </div>
+
+  <!-- 6. PDF PARA EXCEL -->
   <div id="tab-excel" class="panel">
     <div class="field">
       <label>Arquivo PDF tabular:</label>
@@ -128,7 +139,7 @@
     <button class="action btn-green" onclick="execPdfToExcel()">Extrair Dados para Excel (.xlsx)</button>
   </div>
 
-  <!-- 6. IMAGENS ➔ PDF -->
+  <!-- 7. IMAGENS ➔ PDF -->
   <div id="tab-img2pdf" class="panel">
     <div class="field">
       <label>Selecione fotos ou imagens (JPG, PNG):</label>
@@ -137,7 +148,7 @@
     <button class="action btn-purple" onclick="execImgToPdf()">Criar PDF a partir das Imagens</button>
   </div>
 
-  <!-- 7. PDF ➔ IMAGENS -->
+  <!-- 8. PDF ➔ IMAGENS -->
   <div id="tab-pdf2img" class="panel">
     <div class="field">
       <label>Arquivo PDF:</label>
@@ -146,7 +157,7 @@
     <button class="action btn-purple" onclick="execPdfToImg()">Converter Páginas em Fotos (JPG)</button>
   </div>
 
-  <!-- 8. FORMULÁRIOS PDF -->
+  <!-- 9. FORMULÁRIOS PDF -->
   <div id="tab-form" class="panel">
     <div class="field">
       <label>PDF com Formulário Interativo:</label>
@@ -157,7 +168,7 @@
     <button id="form-save-btn" class="action btn-green" style="display: none;" onclick="execSaveForm()">Salvar PDF Preenchido</button>
   </div>
 
-  <!-- 9. PROTEGER -->
+  <!-- 10. PROTEGER -->
   <div id="tab-lock" class="panel">
     <div class="field">
       <label>Arquivo PDF:</label>
@@ -332,7 +343,7 @@
     }
   }
 
-  // 4. PDF PARA WORD (.DOC) RESILIENTE
+  // 4. PDF PARA WORD (.DOC)
   async function execPdfToWord() {
     const input = document.getElementById('word-file');
     if (!input.files.length) return msg('Selecione um PDF primeiro.', false);
@@ -365,7 +376,88 @@
     }
   }
 
-  // 5. PDF PARA EXCEL (.XLSX)
+  // 5. WORD (.DOCX) PARA PDF
+  async function execWordToPdf() {
+    const input = document.getElementById('word2pdf-file');
+    if (!input.files.length) return msg('Selecione um arquivo .docx do Word.', false);
+
+    try {
+      msg('Lendo arquivo Word e gerando PDF...');
+      const buffer = await input.files[0].arrayBuffer();
+
+      // Extrai o texto formatado do .docx usando Mammoth
+      const result = await mammoth.extractRawText({ arrayBuffer: buffer });
+      const fullText = result.value || '';
+
+      if (!fullText.trim()) {
+        return msg('O arquivo Word está vazio ou contém apenas imagens não processáveis.', false);
+      }
+
+      const pdfDoc = await PDFLib.PDFDocument.create();
+      const font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+      const fontSize = 11;
+      const lineHeight = 16;
+      const margin = 40;
+      const pageWidth = 595.28;  // A4
+      const pageHeight = 841.89; // A4
+      const maxLineWidth = pageWidth - (margin * 2);
+
+      let page = pdfDoc.addPage([pageWidth, pageHeight]);
+      let currentY = pageHeight - margin;
+
+      // Quebra o texto por parágrafos e linhas para caber na página A4
+      const paragraphs = fullText.split('\n');
+
+      for (let para of paragraphs) {
+        para = para.trim();
+        if (!para) {
+          currentY -= lineHeight;
+          if (currentY < margin) {
+            page = pdfDoc.addPage([pageWidth, pageHeight]);
+            currentY = pageHeight - margin;
+          }
+          continue;
+        }
+
+        // Divide o parágrafo em linhas menores que cabem na largura
+        const words = para.split(' ');
+        let currentLine = '';
+
+        for (let word of words) {
+          const testLine = currentLine ? `${currentLine} ${word}` : word;
+          const textWidth = font.widthOfTextAtSize(testLine, fontSize);
+
+          if (textWidth < maxLineWidth) {
+            currentLine = testLine;
+          } else {
+            page.drawText(currentLine, { x: margin, y: currentY, size: fontSize, font, color: PDFLib.rgb(0.1, 0.1, 0.1) });
+            currentY -= lineHeight;
+            if (currentY < margin) {
+              page = pdfDoc.addPage([pageWidth, pageHeight]);
+              currentY = pageHeight - margin;
+            }
+            currentLine = word;
+          }
+        }
+
+        if (currentLine) {
+          page.drawText(currentLine, { x: margin, y: currentY, size: fontSize, font, color: PDFLib.rgb(0.1, 0.1, 0.1) });
+          currentY -= lineHeight;
+          if (currentY < margin) {
+            page = pdfDoc.addPage([pageWidth, pageHeight]);
+            currentY = pageHeight - margin;
+          }
+        }
+      }
+
+      const pdfBytes = await pdfDoc.save();
+      await entregarArquivo(new Blob([pdfBytes], { type: 'application/pdf' }), input.files[0].name.replace(/\.docx$/i, '') + '.pdf');
+    } catch (e) {
+      msg('❌ Erro ao converter Word para PDF: ' + e.message, false);
+    }
+  }
+
+  // 6. PDF PARA EXCEL (.XLSX)
   async function execPdfToExcel() {
     const input = document.getElementById('excel-file');
     if (!input.files.length) return msg('Selecione um PDF primeiro.', false);
@@ -404,7 +496,7 @@
     }
   }
 
-  // 6. IMAGENS ➔ PDF
+  // 7. IMAGENS ➔ PDF
   async function execImgToPdf() {
     const input = document.getElementById('img-files');
     if (!input.files.length) return msg('Selecione ao menos uma imagem.', false);
@@ -432,7 +524,7 @@
     }
   }
 
-  // 7. PDF ➔ IMAGENS (JPG)
+  // 8. PDF ➔ IMAGENS (JPG)
   async function execPdfToImg() {
     const input = document.getElementById('pdf2img-file');
     if (!input.files.length) return msg('Selecione um PDF primeiro.', false);
@@ -461,7 +553,7 @@
     }
   }
 
-  // 8. FORMULÁRIOS
+  // 9. FORMULÁRIOS
   async function inspectFormFields() {
     const input = document.getElementById('form-file');
     const container = document.getElementById('form-fields-container');
@@ -521,7 +613,7 @@
     }
   }
 
-  // 9. LOCK
+  // 10. LOCK
   async function execLock() {
     const input = document.getElementById('lock-file');
     const pass = document.getElementById('lock-pass').value;
