@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ferramentas PDF</title>
 
-  <!-- CDNs com fallback automático para nunca dar 'PDFLib is not defined' -->
-  <script src="pdf-lib.min.js"></script>
+  <!-- Carregador resiliente com fallback triplo -->
+  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+  <script>
     if (typeof PDFLib === 'undefined') {
-      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.9/pdf-lib.min.js"><\/script>');
+      document.write('<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.9/dist/pdf-lib.min.js"><\/script>');
     }
   </script>
 
@@ -48,7 +49,6 @@
     .status-ok { background: #dcfce7; color: #15803d; }
     .status-err { background: #fee2e2; color: #b91c1c; }
 
-    /* Caixa que aparece no celular para nunca perder o arquivo baixado */
     #download-box {
       display: none; margin-top: 14px; padding: 14px; border: 2px dashed #2563eb;
       background: #eff6ff; border-radius: 8px; text-align: center;
@@ -67,7 +67,7 @@
   <div class="tabs">
     <button class="tab-btn active" onclick="openTab(event, 'tab-unlock')">🔓 Desbloquear</button>
     <button class="tab-btn" onclick="openTab(event, 'tab-merge')">📑 Juntar</button>
-    <button class="tab-btn" onclick="openTab(event, 'tab-split')">✂️ Dividir</button>
+    <button class="tab-btn" onclick="openTab(event, 'tab-split')">✂️️ Dividir</button>
     <button class="tab-btn" onclick="openTab(event, 'tab-lock')">🔒 Proteger</button>
   </div>
 
@@ -121,7 +121,6 @@
 
   <div id="status"></div>
 
-  <!-- Botão fixo visível pós-processamento -->
   <div id="download-box">
     <span id="download-text">Seu arquivo está pronto!</span><br>
     <a id="download-link" href="#" target="_blank" download="arquivo.pdf">📥 Baixar / Abrir Arquivo</a>
@@ -147,18 +146,16 @@
 
   function checkLib() {
     if (typeof PDFLib === 'undefined') {
-      msg('❌ Erro: O script da biblioteca PDF ainda não carregou. Verifique sua conexão com a internet e recarregue a página.', false);
+      msg('Aguarde alguns segundos e tente novamente (a biblioteca está sendo carregada)...', false);
       return false;
     }
     return true;
   }
 
-  // Entrega o arquivo garantindo acesso tanto no PC quanto no Celular
   async function entregarArquivo(bytes, nomeArquivo) {
     const blob = new Blob([bytes], { type: 'application/pdf' });
     const url = URL.createObjectURL(blob);
 
-    // 1. Atualiza e exibe o botão visível na tela
     const box = document.getElementById('download-box');
     const link = document.getElementById('download-link');
     link.href = url;
@@ -166,22 +163,15 @@
     link.innerText = `📥 Baixar ${nomeArquivo}`;
     box.style.display = 'block';
 
-    // 2. No celular, se o navegador permitir, abre a folha nativa (WhatsApp, Salvar em Arquivos, Drive)
     if (navigator.canShare && navigator.canShare({ files: [new File([blob], nomeArquivo, { type: 'application/pdf' })] })) {
       try {
         const file = new File([blob], nomeArquivo, { type: 'application/pdf' });
-        await navigator.share({
-          files: [file],
-          title: nomeArquivo,
-        });
-        msg('✅ Arquivo pronto e compartilhado!');
+        await navigator.share({ files: [file], title: nomeArquivo });
+        msg('✅ Arquivo pronto!');
         return;
-      } catch (err) {
-        // Se o usuário fechar a tela de compartilhamento, segue o fluxo normal
-      }
+      } catch (err) {}
     }
 
-    // 3. Fallback: disparo de download tradicional
     const a = document.createElement('a');
     a.href = url;
     a.download = nomeArquivo;
@@ -189,10 +179,9 @@
     a.click();
     document.body.removeChild(a);
 
-    msg('✅ Concluído! Se o download não começou sozinho, clique no botão azul abaixo.');
+    msg('✅ Concluído! Se o download não iniciou automaticamente, use o botão azul abaixo.');
   }
 
-  // --- UNLOCK ---
   async function execUnlock() {
     if (!checkLib()) return;
     const input = document.getElementById('unlock-file');
@@ -210,7 +199,6 @@
     }
   }
 
-  // --- MERGE ---
   async function execMerge() {
     if (!checkLib()) return;
     const input = document.getElementById('merge-files');
@@ -234,7 +222,6 @@
     }
   }
 
-  // --- SPLIT ---
   async function execSplit() {
     if (!checkLib()) return;
     const input = document.getElementById('split-file');
@@ -274,7 +261,6 @@
     }
   }
 
-  // --- LOCK ---
   async function execLock() {
     if (!checkLib()) return;
     const input = document.getElementById('lock-file');
