@@ -57,6 +57,15 @@
       display: inline-block; margin-top: 6px; padding: 10px 16px; background: #2563eb;
       color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 0.9rem;
     }
+
+    /* Lista visual do Merge */
+    .merge-box {
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
+      padding: 10px; margin-bottom: 12px; font-size: 0.85rem; color: #334155;
+    }
+    .merge-box ol { margin: 6px 0 0 0; padding-left: 20px; }
+    .merge-box li { margin-bottom: 4px; }
+    .btn-remove { color: #dc2626; cursor: pointer; font-weight: bold; margin-left: 6px; }
   </style>
 </head>
 <body>
@@ -64,10 +73,11 @@
 <div class="card">
   <h2>🛠️ PDF Tools Hub</h2>
 
+  <!-- Abas de Navegação -->
   <div class="tabs">
     <button class="tab-btn active" onclick="openTab(event, 'tab-unlock')">🔓 Unlock</button>
     <button class="tab-btn" onclick="openTab(event, 'tab-merge')">📑 Juntar</button>
-    <button class="tab-btn" onclick="openTab(event, 'tab-split')">✂️️ Dividir</button>
+    <button class="tab-btn" onclick="openTab(event, 'tab-split')">✂️ Dividir</button>
     <button class="tab-btn" onclick="openTab(event, 'tab-word')">📄 PDF ➔ Word</button>
     <button class="tab-btn" onclick="openTab(event, 'tab-word2pdf')">📝 Word ➔ PDF</button>
     <button class="tab-btn" onclick="openTab(event, 'tab-excel')">📊 Excel</button>
@@ -77,7 +87,7 @@
     <button class="tab-btn" onclick="openTab(event, 'tab-lock')">🔒 Proteger</button>
   </div>
 
-  <!-- 1. DESBLOQUEAR -->
+  <!-- 1. UNLOCK -->
   <div id="tab-unlock" class="panel active">
     <div class="field">
       <label>Arquivo PDF protegido:</label>
@@ -90,13 +100,22 @@
     <button class="action btn-blue" onclick="execUnlock()">Desbloquear Documento</button>
   </div>
 
-  <!-- 2. JUNTAR -->
+  <!-- 2. JUNTAR (MERGE CUMULATIVO) -->
   <div id="tab-merge" class="panel">
     <div class="field">
-      <label>Selecione 2 ou mais PDFs:</label>
-      <input type="file" id="merge-files" accept="application/pdf" multiple>
+      <label>Adicionar arquivo PDF (um por um ou vários):</label>
+      <input type="file" id="merge-file-input" accept="application/pdf" multiple onchange="adicionarPdfsParaMerge(this)">
     </div>
-    <button class="action btn-green" onclick="execMerge()">Juntar PDFs</button>
+
+    <!-- Lista de arquivos que vão sendo adicionados -->
+    <div id="merge-list-container" class="merge-box">
+      <em>Nenhum PDF adicionado ainda. Escolha o primeiro arquivo acima.</em>
+    </div>
+
+    <button class="action btn-green" onclick="execMerge()">Juntar Todos os PDFs</button>
+    <button type="button" onclick="limparListaMerge()" style="width: 100%; margin-top: 6px; background: none; border: none; color: #dc2626; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
+      Limpar lista
+    </button>
   </div>
 
   <!-- 3. DIVIDIR -->
@@ -200,6 +219,7 @@
 
   let currentFormDoc = null;
   let currentFormFileName = '';
+  let arquivosParaMerge = [];
 
   function openTab(evt, tabId) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -245,7 +265,7 @@
     a.click();
     document.body.removeChild(a);
 
-    msg('✅ Concluído! Se o arquivo não baixou, use o botão cinza abaixo para abrir no Chrome.');
+    msg('✅ Concluído! Se o arquivo não baixou, use o botão cinza abaixo.');
   }
 
   function forcarAbrirNoChrome() {
@@ -257,7 +277,7 @@
     }
   }
 
-  // 1. UNLOCK
+  // --- 1. UNLOCK ---
   async function execUnlock() {
     const input = document.getElementById('unlock-file');
     let pass = document.getElementById('unlock-pass').value.trim();
@@ -306,27 +326,66 @@
     }
   }
 
-  // 2. MERGE
+  // --- 2. MERGE CUMULATIVO (ADICIONA UM A UM) ---
+  function adicionarPdfsParaMerge(input) {
+    if (!input.files || input.files.length === 0) return;
+    for (let f of input.files) {
+      arquivosParaMerge.push(f);
+    }
+    atualizarVisualizacaoMerge();
+    input.value = '';
+  }
+
+  function atualizarVisualizacaoMerge() {
+    const container = document.getElementById('merge-list-container');
+    if (arquivosParaMerge.length === 0) {
+      container.innerHTML = '<em>Nenhum PDF adicionado ainda. Escolha o primeiro arquivo acima.</em>';
+      return;
+    }
+
+    let html = `<strong>Arquivos na fila (${arquivosParaMerge.length}):</strong><ol>`;
+    arquivosParaMerge.forEach((f, idx) => {
+      html += `<li>${f.name} <span class="btn-remove" onclick="removerPdfMerge(${idx})">✖</span></li>`;
+    });
+    html += '</ol>';
+    container.innerHTML = html;
+  }
+
+  function removerPdfMerge(index) {
+    arquivosParaMerge.splice(index, 1);
+    atualizarVisualizacaoMerge();
+  }
+
+  function limparListaMerge() {
+    arquivosParaMerge = [];
+    atualizarVisualizacaoMerge();
+  }
+
   async function execMerge() {
-    const input = document.getElementById('merge-files');
-    if (input.files.length < 2) return msg('Selecione pelo menos 2 arquivos.', false);
+    if (arquivosParaMerge.length < 2) {
+      return msg('Adicione pelo menos 2 arquivos PDF na fila para juntar.', false);
+    }
 
     try {
-      msg('Unindo arquivos...');
+      msg(`Unindo ${arquivosParaMerge.length} arquivos...`);
       const mergedPdf = await PDFLib.PDFDocument.create();
-      for (let f of input.files) {
-        const src = await PDFLib.PDFDocument.load(await f.arrayBuffer());
+
+      for (let file of arquivosParaMerge) {
+        const buffer = await file.arrayBuffer();
+        const src = await PDFLib.PDFDocument.load(buffer, { ignoreEncryption: true });
         const pages = await mergedPdf.copyPages(src, src.getPageIndices());
         pages.forEach(p => mergedPdf.addPage(p));
       }
+
       const bytes = await mergedPdf.save();
       await entregarArquivo(new Blob([bytes], { type: 'application/pdf' }), 'documentos_juntos.pdf');
+      msg(`✅ ${arquivosParaMerge.length} PDFs unidos com sucesso!`);
     } catch (e) {
       msg('❌ Erro ao unir: ' + e.message, false);
     }
   }
 
-  // 3. SPLIT
+  // --- 3. SPLIT ---
   async function execSplit() {
     const input = document.getElementById('split-file');
     const range = document.getElementById('split-pages').value.trim();
@@ -362,7 +421,7 @@
     }
   }
 
-  // 4. PDF PARA WORD (.DOC)
+  // --- 4. PDF PARA WORD (.DOC) ---
   async function execPdfToWord() {
     const input = document.getElementById('word-file');
     if (!input.files.length) return msg('Selecione um PDF primeiro.', false);
@@ -395,7 +454,7 @@
     }
   }
 
-  // 5. WORD (.DOCX) PARA PDF
+  // --- 5. WORD (.DOCX) PARA PDF ---
   async function execWordToPdf() {
     const input = document.getElementById('word2pdf-file');
     if (!input.files.length) return msg('Selecione um arquivo .docx do Word.', false);
@@ -480,7 +539,7 @@
     }
   }
 
-  // 6. PDF PARA EXCEL (.XLSX)
+  // --- 6. PDF PARA EXCEL (.XLSX) ---
   async function execPdfToExcel() {
     const input = document.getElementById('excel-file');
     if (!input.files.length) return msg('Selecione um PDF primeiro.', false);
@@ -519,7 +578,7 @@
     }
   }
 
-  // 7. IMAGENS ➔ PDF
+  // --- 7. IMAGENS ➔ PDF ---
   async function execImgToPdf() {
     const input = document.getElementById('img-files');
     if (!input.files.length) return msg('Selecione ao menos uma imagem.', false);
@@ -547,7 +606,7 @@
     }
   }
 
-  // 8. PDF ➔ IMAGENS (JPG)
+  // --- 8. PDF ➔ IMAGENS (JPG) ---
   async function execPdfToImg() {
     const input = document.getElementById('pdf2img-file');
     if (!input.files.length) return msg('Selecione um PDF primeiro.', false);
@@ -576,7 +635,7 @@
     }
   }
 
-  // 9. FORMULÁRIOS
+  // --- 9. FORMULÁRIOS ---
   async function inspectFormFields() {
     const input = document.getElementById('form-file');
     const container = document.getElementById('form-fields-container');
@@ -636,7 +695,7 @@
     }
   }
 
-  // 10. LOCK
+  // --- 10. PROTEGER ---
   async function execLock() {
     const input = document.getElementById('lock-file');
     const pass = document.getElementById('lock-pass').value;
