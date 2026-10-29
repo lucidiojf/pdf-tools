@@ -115,22 +115,30 @@
     </button>
   </div>
 
-  <!-- 3. JUNTAR FOTOS COM AUTO-DIVISÃO (MAX 4 POR PAINEL 2x2) -->
+  <!-- 3. JUNTAR FOTOS COM SELEÇÃO DE LOTE (DE 2 EM 2 OU DE 4 EM 4) -->
   <div id="tab-merge-img" class="panel">
     <div class="field">
       <label>Adicionar fotos (uma por uma ou várias):</label>
       <input type="file" id="merge-img-input" accept="image/jpeg, image/png, image/webp" multiple onchange="adicionarImagensParaMerge(this)">
     </div>
 
+    <div class="field">
+      <label>Formato de organização:</label>
+      <select id="merge-img-batch-size">
+        <option value="2" selected>📖 De 2 em 2 (Lado a lado - Ideal para receitas/tabelas)</option>
+        <option value="4">🧱 De 4 em 4 (Painel 2x2 compacto)</option>
+      </select>
+    </div>
+
     <div style="background: #e0f2fe; border: 1px solid #bae6fd; padding: 8px; border-radius: 6px; font-size: 0.8rem; color: #0369a1; margin-bottom: 12px;">
-      💡 <strong>Nitidez Garantida:</strong> As fotos são montadas em painéis compactos de no máximo 4 páginas (2x2). Se você adicionar mais de 4 fotos (ex: 7), o sistema gera automaticamente <strong>Parte 1</strong> e <strong>Parte 2</strong> sem esticar nem embaçar.
+      💡 <strong>Dica de Legibilidade:</strong> O modo <strong>De 2 em 2</strong> evita que visualizadores como o Table Notes comprimam a imagem ao meio, garantindo leitura direta das tabelas.
     </div>
 
     <div id="merge-img-list-container" class="list-box">
       <em>Nenhuma foto adicionada ainda. Escolha a 1ª foto acima.</em>
     </div>
 
-    <button class="action btn-purple" onclick="execMergeImagesAuto4()">Juntar Fotos em Alta Nitidez (JPG)</button>
+    <button class="action btn-purple" onclick="execMergeImagesLotes()">Juntar Fotos em Alta Resolução (JPG)</button>
     <button type="button" onclick="limparListaImagensMerge()" style="width: 100%; margin-top: 6px; background: none; border: none; color: #dc2626; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
       Limpar lista de fotos
     </button>
@@ -270,7 +278,6 @@
     a.innerText = `📥 Baixar ${nomeArquivo}`;
     container.appendChild(a);
 
-    // Dispara download automático do arquivo
     const tempA = document.createElement('a');
     tempA.href = url;
     tempA.download = nomeArquivo;
@@ -398,7 +405,7 @@
     }
   }
 
-  // --- 3. JUNTAR FOTOS: MÁXIMO 4 POR PAINEL 2x2 EM JPG NÍTIDO ---
+  // --- 3. JUNTAR FOTOS: LOTES DE 2 EM 2 OU 4 EM 4 COM RESOLUÇÃO MÁXIMA ---
   function adicionarImagensParaMerge(input) {
     if (!input.files || input.files.length === 0) return;
     for (let f of input.files) {
@@ -433,10 +440,9 @@
     atualizarVisualizacaoImagensMerge();
   }
 
-  // Monta um lote de 1 a 4 imagens num painel 2x2 sem compressão excessiva
-  async function montarPainel4Imagens(imgsLote, nomeArquivo) {
+  async function montarPainelLote(imgsLote, nomeArquivo, batchSize) {
     return new Promise((resolve) => {
-      const cols = imgsLote.length === 1 ? 1 : 2;
+      const cols = (batchSize === 2) ? imgsLote.length : (imgsLote.length === 1 ? 1 : 2);
       const colWidth = Math.max(...imgsLote.map(img => img.naturalWidth));
       const rows = Math.ceil(imgsLote.length / cols);
       const rowHeights = [];
@@ -479,7 +485,6 @@
         currentY += rowHeights[r];
       }
 
-      // Exportação em formato JPG com qualidade máxima (0.98)
       canvas.toBlob((blob) => {
         entregarArquivo(blob, nomeArquivo);
         resolve();
@@ -487,14 +492,16 @@
     });
   }
 
-  async function execMergeImagesAuto4() {
+  async function execMergeImagesLotes() {
     if (imagensParaMerge.length < 2) {
       return msg('Adicione pelo menos 2 fotos para juntar.', false);
     }
 
+    const batchSize = parseInt(document.getElementById('merge-img-batch-size').value, 10);
+
     try {
       document.getElementById('links-container').innerHTML = '';
-      msg('Carregando imagens e gerando painéis em alta resolução...');
+      msg('Processando imagens em resolução máxima...');
 
       const loadedImages = await Promise.all(imagensParaMerge.map(file => {
         return new Promise((resolve, reject) => {
@@ -505,19 +512,18 @@
         });
       }));
 
-      // Divide em lotes de no máximo 4 imagens
-      const totalLotes = Math.ceil(loadedImages.length / 4);
+      const totalLotes = Math.ceil(loadedImages.length / batchSize);
 
       for (let i = 0; i < totalLotes; i++) {
-        const pedaco = loadedImages.slice(i * 4, (i + 1) * 4);
+        const pedaco = loadedImages.slice(i * batchSize, (i + 1) * batchSize);
         const nomeParte = totalLotes === 1 
-          ? 'painel_fotos_hd.jpg' 
-          : `painel_fotos_parte_${i + 1}_de_${totalLotes}.jpg`;
+          ? 'fotos_unidas.jpg' 
+          : `fotos_parte_${i + 1}_de_${totalLotes}.jpg`;
         
-        await montarPainel4Imagens(pedaco, nomeParte);
+        await montarPainelLote(pedaco, nomeParte, batchSize);
       }
 
-      msg(`✅ Concluído! Gerado(s) ${totalLotes} painel(éis) de 4 fotos em formato JPG nítido.`);
+      msg(`✅ Concluído! Gerados ${totalLotes} arquivos JPG prontos para leitura.`);
     } catch (e) {
       msg('❌ Falha ao processar imagens: ' + e.message, false);
     }
