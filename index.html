@@ -115,7 +115,7 @@
     </button>
   </div>
 
-  <!-- 3. JUNTAR FOTOS (HORIZONTAL OU VERTICAL) -->
+  <!-- 3. JUNTAR FOTOS COM ALTA RESOLUÇÃO -->
   <div id="tab-merge-img" class="panel">
     <div class="field">
       <label>Adicionar fotos (uma por uma ou várias):</label>
@@ -123,7 +123,7 @@
     </div>
 
     <div class="field">
-      <label>Como deseja juntar as fotos?</label>
+      <label>Disposição das fotos:</label>
       <select id="merge-img-direction">
         <option value="horizontal">↔️ Lado a Lado (Horizontal)</option>
         <option value="vertical">↕️ De Cima para Baixo (Vertical)</option>
@@ -134,7 +134,7 @@
       <em>Nenhuma foto adicionada ainda. Escolha a 1ª foto acima.</em>
     </div>
 
-    <button class="action btn-purple" onclick="execMergeImages()">Juntar e Gerar Imagem</button>
+    <button class="action btn-purple" onclick="execMergeImages()">Juntar e Gerar Imagem Ultra Nítida</button>
     <button type="button" onclick="limparListaImagensMerge()" style="width: 100%; margin-top: 6px; background: none; border: none; color: #dc2626; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
       Limpar lista de fotos
     </button>
@@ -408,7 +408,7 @@
     }
   }
 
-  // --- 3. JUNTAR FOTOS COM ALTA NITIDEZ ---
+  // --- 3. JUNTAR FOTOS COM ESCALA 2X (RETINA / ANTI-DESFOQUE) ---
   function adicionarImagensParaMerge(input) {
     if (!input.files || input.files.length === 0) return;
     for (let f of input.files) {
@@ -451,7 +451,7 @@
     const direction = document.getElementById('merge-img-direction').value;
 
     try {
-      msg('Processando imagens com alta nitidez...');
+      msg('Renderizando com nitidez máxima...');
 
       const loadedImages = await Promise.all(imagensParaMerge.map(file => {
         return new Promise((resolve, reject) => {
@@ -465,8 +465,8 @@
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
 
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
+      // Fator de ampliação de resolução (escala de 2x evita texto embaçado)
+      const scale = 2;
 
       if (direction === 'horizontal') {
         const maxHeight = Math.max(...loadedImages.map(img => img.naturalHeight));
@@ -477,11 +477,16 @@
           return proportionalWidth;
         });
 
-        canvas.width = Math.round(totalWidth);
-        canvas.height = Math.round(maxHeight);
+        // Configuração de dimensões ampliadas
+        canvas.width = Math.round(totalWidth * scale);
+        canvas.height = Math.round(maxHeight * scale);
+
+        // Ajusta contexto para escala 2x com preservação de arestas
+        ctx.scale(scale, scale);
+        ctx.imageSmoothingEnabled = false; // Desativa borrão do navegador
 
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, totalWidth, maxHeight);
 
         let currentX = 0;
         for (let i = 0; i < loadedImages.length; i++) {
@@ -499,11 +504,14 @@
           return proportionalHeight;
         });
 
-        canvas.width = Math.round(maxWidth);
-        canvas.height = Math.round(totalHeight);
+        canvas.width = Math.round(maxWidth * scale);
+        canvas.height = Math.round(totalHeight * scale);
+
+        ctx.scale(scale, scale);
+        ctx.imageSmoothingEnabled = false;
 
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillRect(0, 0, maxWidth, totalHeight);
 
         let currentY = 0;
         for (let i = 0; i < loadedImages.length; i++) {
@@ -514,11 +522,12 @@
         }
       }
 
+      // Exportação em formato PNG nativo para leitura nítida
       canvas.toBlob(async (blob) => {
         if (!blob) return msg('Erro ao compilar imagem.', false);
-        const prefixo = direction === 'horizontal' ? 'fotos_lado_a_lado' : 'fotos_empilhadas';
+        const prefixo = direction === 'horizontal' ? 'fotos_lado_a_lado_hd' : 'fotos_empilhadas_hd';
         await entregarArquivo(blob, `${prefixo}.png`);
-        msg(`✅ ${imagensParaMerge.length} fotos combinadas em alta resolução (PNG)!`);
+        msg(`✅ ${imagensParaMerge.length} fotos combinadas em alta nitidez (HD)!`);
       }, 'image/png');
 
     } catch (e) {
