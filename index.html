@@ -2,61 +2,862 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Unir Fotos na Vertical</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Tools Pro</title>
+
+  <!-- Bibliotecas para PDF, Word, Excel e Telegram WebApp -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+
   <style>
-    body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: auto; }
-    button { padding: 10px 16px; margin-top: 10px; cursor: pointer; }
-    canvas { max-width: 100%; height: auto; border: 1px solid #ccc; margin-top: 15px; display: none; }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f1f5f9; display: flex; justify-content: center; padding: 20px 14px; margin: 0; }
+    .card { background: #ffffff; width: 100%; max-width: 560px; padding: 20px; border-radius: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); }
+    h2 { margin-top: 0; color: #0f172a; text-align: center; font-size: 1.25rem; }
+
+    .tabs { display: flex; gap: 6px; margin-bottom: 16px; overflow-x: auto; padding-bottom: 6px; }
+    .tab-btn {
+      flex: 1; padding: 8px 10px; border: 1px solid #cbd5e1; background: #f8fafc; border-radius: 6px;
+      font-weight: 600; font-size: 0.76rem; cursor: pointer; color: #334155; white-space: nowrap;
+    }
+    .tab-btn.active { background: #2563eb; color: #ffffff; border-color: #2563eb; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .field { margin-bottom: 12px; }
+    label { display: block; font-weight: 600; margin-bottom: 5px; color: #334155; font-size: 0.82rem; }
+    input[type="file"], input[type="text"], input[type="password"], select {
+      width: 100%; padding: 9px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem;
+    }
+
+    button.action {
+      width: 100%; padding: 11px; border: none; border-radius: 8px; font-size: 0.92rem;
+      font-weight: 600; color: white; cursor: pointer; margin-top: 6px;
+    }
+    .btn-blue { background: #2563eb; }
+    .btn-green { background: #16a34a; }
+    .btn-orange { background: #ea580c; }
+    .btn-dark { background: #334155; }
+    .btn-purple { background: #7c3aed; }
+    button.action:hover { opacity: 0.9; }
+
+    #status { margin-top: 14px; padding: 10px; border-radius: 6px; font-size: 0.85rem; display: none; text-align: center; }
+    .status-ok { background: #dcfce7; color: #15803d; }
+    .status-err { background: #fee2e2; color: #b91c1c; }
+
+    #download-box {
+      display: none; margin-top: 14px; padding: 14px; border: 2px dashed #2563eb;
+      background: #eff6ff; border-radius: 8px; text-align: center;
+    }
+    .dl-btn {
+      display: block; margin: 8px auto 0 auto; padding: 10px 16px; background: #2563eb;
+      color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 0.88rem; width: fit-content;
+    }
+
+    .list-box {
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
+      padding: 10px; margin-bottom: 12px; font-size: 0.85rem; color: #334155;
+    }
+    .list-box ol { margin: 6px 0 0 0; padding-left: 20px; }
+    .list-box li { margin-bottom: 4px; }
+    .btn-remove { color: #dc2626; cursor: pointer; font-weight: bold; margin-left: 6px; }
   </style>
 </head>
 <body>
-  <h3>Unir Fotos na Vertical</h3>
-  <input type="file" id="fileInput" multiple accept="image/*"><br>
-  <button onclick="mesclarFotos()">Gerar Imagem Única</button>
-  <br>
-  <a id="downloadLink" style="display:none; margin-top:10px; font-weight:bold;">Baixar Imagem Final</a>
-  <canvas id="canvas"></canvas>
 
-  <script>
-    async function mesclarFotos() {
-      const files = Array.from(document.getElementById('fileInput').files);
-      if (!files.length) return alert('Selecione pelo menos uma foto.');
+<div class="card">
+  <h2>🛠️ PDF Tools Hub</h2>
 
-      const imagens = await Promise.all(files.map(file => new Promise(res => {
-        const img = new Image();
-        img.onload = () => res(img);
-        img.src = URL.createObjectURL(file);
-      })));
+  <!-- Abas de Navegação -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="openTab(event, 'tab-unlock')">🔓 Unlock</button>
+    <button class="tab-btn" onclick="openTab(event, 'tab-merge')">📑 Juntar PDF</button>
+    <button class="tab-btn" onclick="openTab(event, 'tab-merge-img')">📐 Juntar Fotos</button>
+    <button class="tab-btn" onclick="openTab(event, 'tab-split')">✂️ Dividir</button>
+    <button class="tab-btn" onclick="openTab(event, 'tab-word')">📄 PDF ➔ Word</button>
+    <button class="tab-btn" onclick="openTab(event, 'tab-word2pdf')">📝 Word ➔ PDF</button>
+    <button class="tab-btn" onclick="openTab(event, 'tab-excel')">📊 Excel</button>
+    <button class="tab-btn" onclick="openTab(event, 'tab-img2pdf')">🖼️ Img ➔ PDF</button>
+    <button class="tab-btn" onclick="openTab(event, 'tab-pdf2img')">📄 PDF ➔ Img</button>
+    <button class="tab-btn" onclick="openTab(event, 'tab-form')">📋 Form</button>
+    <button class="tab-btn" onclick="openTab(event, 'tab-lock')">🔒 Proteger</button>
+  </div>
 
-      // Ajusta todas para a largura da maior imagem
-      const larguraMaxima = Math.max(...imagens.map(img => img.naturalWidth));
-      let alturaTotal = 0;
-      
-      const redimensionadas = imagens.map(img => {
-        const proporcao = larguraMaxima / img.naturalWidth;
-        const altura = img.naturalHeight * proporcao;
-        alturaTotal += altura;
-        return { img, altura };
-      });
+  <!-- 1. UNLOCK -->
+  <div id="tab-unlock" class="panel active">
+    <div class="field">
+      <label>Arquivo PDF protegido:</label>
+      <input type="file" id="unlock-file" accept="application/pdf">
+    </div>
+    <div class="field">
+      <label>Senha ou CPF:</label>
+      <input type="text" id="unlock-pass" placeholder="Digite a senha ou CPF...">
+    </div>
+    <button class="action btn-blue" onclick="execUnlock()">Desbloquear Documento</button>
+  </div>
 
-      const canvas = document.getElementById('canvas');
-      canvas.width = larguraMaxima;
-      canvas.height = alturaTotal;
+  <!-- 2. JUNTAR PDF (CUMULATIVO) -->
+  <div id="tab-merge" class="panel">
+    <div class="field">
+      <label>Adicionar arquivo PDF (um por um ou vários):</label>
+      <input type="file" id="merge-file-input" accept="application/pdf" multiple onchange="adicionarPdfsParaMerge(this)">
+    </div>
+    <div id="merge-list-container" class="list-box">
+      <em>Nenhum PDF adicionado ainda. Escolha o primeiro arquivo acima.</em>
+    </div>
+    <button class="action btn-green" onclick="execMerge()">Juntar Todos os PDFs</button>
+    <button type="button" onclick="limparListaMerge()" style="width: 100%; margin-top: 6px; background: none; border: none; color: #dc2626; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
+      Limpar lista
+    </button>
+  </div>
+
+  <!-- 3. JUNTAR FOTOS COM AUTO-DIVISÃO (MAX 4 POR PAINEL 2x2) -->
+  <div id="tab-merge-img" class="panel">
+    <div class="field">
+      <label>Adicionar fotos (uma por uma ou várias):</label>
+      <input type="file" id="merge-img-input" accept="image/jpeg, image/png, image/webp" multiple onchange="adicionarImagensParaMerge(this)">
+    </div>
+
+    <div style="background: #e0f2fe; border: 1px solid #bae6fd; padding: 8px; border-radius: 6px; font-size: 0.8rem; color: #0369a1; margin-bottom: 12px;">
+      💡 <strong>Nitidez Garantida:</strong> As fotos são montadas em painéis compactos de no máximo 4 páginas (2x2). Se você adicionar mais de 4 fotos (ex: 7), o sistema gera automaticamente <strong>Parte 1</strong> e <strong>Parte 2</strong> sem esticar nem embaçar.
+    </div>
+
+    <div id="merge-img-list-container" class="list-box">
+      <em>Nenhuma foto adicionada ainda. Escolha a 1ª foto acima.</em>
+    </div>
+
+    <button class="action btn-purple" onclick="execMergeImagesAuto4()">Juntar Fotos em Alta Nitidez (JPG)</button>
+    <button type="button" onclick="limparListaImagensMerge()" style="width: 100%; margin-top: 6px; background: none; border: none; color: #dc2626; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
+      Limpar lista de fotos
+    </button>
+  </div>
+
+  <!-- 4. DIVIDIR -->
+  <div id="tab-split" class="panel">
+    <div class="field">
+      <label>Arquivo PDF:</label>
+      <input type="file" id="split-file" accept="application/pdf">
+    </div>
+    <div class="field">
+      <label>Páginas (ex: 1-3 ou 2,4):</label>
+      <input type="text" id="split-pages" placeholder="Ex: 1-2, 4">
+    </div>
+    <button class="action btn-orange" onclick="execSplit()">Extrair Páginas</button>
+  </div>
+
+  <!-- 5. PDF PARA WORD (.DOC) -->
+  <div id="tab-word" class="panel">
+    <div class="field">
+      <label>Arquivo PDF para transformar em Word:</label>
+      <input type="file" id="word-file" accept="application/pdf">
+    </div>
+    <button class="action btn-blue" onclick="execPdfToWord()">Exportar para Word (.doc)</button>
+  </div>
+
+  <!-- 6. WORD (.DOCX) PARA PDF -->
+  <div id="tab-word2pdf" class="panel">
+    <div class="field">
+      <label>Arquivo Word (.docx):</label>
+      <input type="file" id="word2pdf-file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+    </div>
+    <button class="action btn-blue" onclick="execWordToPdf()">Converter Word em PDF</button>
+  </div>
+
+  <!-- 7. PDF PARA EXCEL -->
+  <div id="tab-excel" class="panel">
+    <div class="field">
+      <label>Arquivo PDF tabular:</label>
+      <input type="file" id="excel-file" accept="application/pdf">
+    </div>
+    <button class="action btn-green" onclick="execPdfToExcel()">Extrair Dados para Excel (.xlsx)</button>
+  </div>
+
+  <!-- 8. IMAGENS ➔ PDF -->
+  <div id="tab-img2pdf" class="panel">
+    <div class="field">
+      <label>Selecione fotos (JPG, PNG):</label>
+      <input type="file" id="img-files" accept="image/jpeg, image/png" multiple>
+    </div>
+    <button class="action btn-purple" onclick="execImgToPdf()">Criar PDF das Imagens</button>
+  </div>
+
+  <!-- 9. PDF ➔ IMAGENS -->
+  <div id="tab-pdf2img" class="panel">
+    <div class="field">
+      <label>Arquivo PDF:</label>
+      <input type="file" id="pdf2img-file" accept="application/pdf">
+    </div>
+    <button class="action btn-purple" onclick="execPdfToImg()">Converter Páginas em Fotos (JPG)</button>
+  </div>
+
+  <!-- 10. FORMULÁRIOS PDF -->
+  <div id="tab-form" class="panel">
+    <div class="field">
+      <label>PDF com Formulário Interativo:</label>
+      <input type="file" id="form-file" accept="application/pdf">
+    </div>
+    <button class="action btn-dark" onclick="inspectFormFields()">Listar e Editar Campos</button>
+    <div id="form-fields-container" style="margin-top: 10px;"></div>
+    <button id="form-save-btn" class="action btn-green" style="display: none;" onclick="execSaveForm()">Salvar PDF Preenchido</button>
+  </div>
+
+  <!-- 11. PROTEGER -->
+  <div id="tab-lock" class="panel">
+    <div class="field">
+      <label>Arquivo PDF:</label>
+      <input type="file" id="lock-file" accept="application/pdf">
+    </div>
+    <div class="field">
+      <label>Crie uma senha:</label>
+      <input type="password" id="lock-pass" placeholder="Senha do arquivo...">
+    </div>
+    <button class="action btn-dark" onclick="execLock()">Proteger com Senha</button>
+  </div>
+
+  <div id="status"></div>
+
+  <!-- Caixa de Downloads Dinâmica -->
+  <div id="download-box">
+    <span id="download-text" style="font-weight:600; color:#1e293b;">Seu(s) arquivo(s) estão prontos:</span>
+    <div id="links-container"></div>
+    <div style="margin-top:12px;">
+      <button onclick="forcarAbrirNoChrome()" style="background:#475569; color:white; border:none; padding:8px 12px; border-radius:6px; font-size:0.8rem; cursor:pointer;">
+        🌐 Abrir no Navegador (Chrome)
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+  let currentFormDoc = null;
+  let currentFormFileName = '';
+  let arquivosParaMerge = [];
+  let imagensParaMerge = [];
+
+  function openTab(evt, tabId) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+    evt.currentTarget.classList.add('active');
+    document.getElementById('status').style.display = 'none';
+    document.getElementById('download-box').style.display = 'none';
+    document.getElementById('links-container').innerHTML = '';
+  }
+
+  function msg(texto, sucesso = true) {
+    const el = document.getElementById('status');
+    el.style.display = 'block';
+    el.className = sucesso ? 'status-ok' : 'status-err';
+    el.innerText = texto;
+  }
+
+  function entregarArquivo(blob, nomeArquivo) {
+    const url = URL.createObjectURL(blob);
+    const box = document.getElementById('download-box');
+    const container = document.getElementById('links-container');
+    box.style.display = 'block';
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nomeArquivo;
+    a.className = 'dl-btn';
+    a.innerText = `📥 Baixar ${nomeArquivo}`;
+    container.appendChild(a);
+
+    // Dispara download automático do arquivo
+    const tempA = document.createElement('a');
+    tempA.href = url;
+    tempA.download = nomeArquivo;
+    document.body.appendChild(tempA);
+    tempA.click();
+    document.body.removeChild(tempA);
+  }
+
+  function forcarAbrirNoChrome() {
+    const siteUrl = 'https://lucidiojf.github.io/pdf-tools/index.html';
+    if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openLink) {
+      window.Telegram.WebApp.openLink(siteUrl, { try_instant_view: false });
+    } else {
+      window.open(siteUrl, '_system');
+    }
+  }
+
+  // --- 1. UNLOCK ---
+  async function execUnlock() {
+    const input = document.getElementById('unlock-file');
+    let pass = document.getElementById('unlock-pass').value.trim();
+    if (!input.files.length) return msg('Selecione um PDF.', false);
+
+    msg('Processando desbloqueio...');
+    const buffer = await input.files[0].arrayBuffer();
+    const passwordsToTry = [pass];
+    const onlyNums = pass.replace(/\D/g, '');
+    if (onlyNums && onlyNums !== pass) passwordsToTry.push(onlyNums);
+
+    let doc = null;
+    for (let p of passwordsToTry) {
+      try {
+        doc = await PDFLib.PDFDocument.load(buffer.slice(0), { password: p, ignoreEncryption: false });
+        break;
+      } catch (e) {}
+    }
+
+    if (doc) {
+      const bytes = await doc.save();
+      entregarArquivo(new Blob([bytes], { type: 'application/pdf' }), 'desbloqueado_' + input.files[0].name);
+      return msg('✅ Desbloqueado com sucesso!');
+    }
+
+    try {
+      const pdf = await pdfjsLib.getDocument({ data: buffer, password: pass }).promise;
+      const newPdf = await PDFLib.PDFDocument.create();
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 2.0 });
+        const canvas = document.createElement('canvas');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+        const img = await newPdf.embedJpg(canvas.toDataURL('image/jpeg', 0.95));
+        const newPage = newPdf.addPage([viewport.width, viewport.height]);
+        newPage.drawImage(img, { x: 0, y: 0, width: viewport.width, height: viewport.height });
+      }
+
+      const bytes = await newPdf.save();
+      entregarArquivo(new Blob([bytes], { type: 'application/pdf' }), 'desbloqueado_' + input.files[0].name);
+      msg('✅ Desbloqueado com sucesso!');
+    } catch (e) {
+      msg('❌ Senha incorreta ou formato não suportado.', false);
+    }
+  }
+
+  // --- 2. MERGE PDF ---
+  function adicionarPdfsParaMerge(input) {
+    if (!input.files || input.files.length === 0) return;
+    for (let f of input.files) {
+      arquivosParaMerge.push(f);
+    }
+    atualizarVisualizacaoMerge();
+    input.value = '';
+  }
+
+  function atualizarVisualizacaoMerge() {
+    const container = document.getElementById('merge-list-container');
+    if (arquivosParaMerge.length === 0) {
+      container.innerHTML = '<em>Nenhum PDF adicionado ainda. Escolha o primeiro arquivo acima.</em>';
+      return;
+    }
+
+    let html = `<strong>Arquivos na fila (${arquivosParaMerge.length}):</strong><ol>`;
+    arquivosParaMerge.forEach((f, idx) => {
+      html += `<li>${f.name} <span class="btn-remove" onclick="removerPdfMerge(${idx})">✖</span></li>`;
+    });
+    html += '</ol>';
+    container.innerHTML = html;
+  }
+
+  function removerPdfMerge(index) {
+    arquivosParaMerge.splice(index, 1);
+    atualizarVisualizacaoMerge();
+  }
+
+  function limparListaMerge() {
+    arquivosParaMerge = [];
+    atualizarVisualizacaoMerge();
+  }
+
+  async function execMerge() {
+    if (arquivosParaMerge.length < 2) {
+      return msg('Adicione pelo menos 2 arquivos PDF na fila para juntar.', false);
+    }
+
+    try {
+      msg(`Unindo ${arquivosParaMerge.length} arquivos...`);
+      const mergedPdf = await PDFLib.PDFDocument.create();
+
+      for (let file of arquivosParaMerge) {
+        const buffer = await file.arrayBuffer();
+        const src = await PDFLib.PDFDocument.load(buffer, { ignoreEncryption: true });
+        const pages = await mergedPdf.copyPages(src, src.getPageIndices());
+        pages.forEach(p => mergedPdf.addPage(p));
+      }
+
+      const bytes = await mergedPdf.save();
+      entregarArquivo(new Blob([bytes], { type: 'application/pdf' }), 'documentos_juntos.pdf');
+      msg(`✅ ${arquivosParaMerge.length} PDFs unidos com sucesso!`);
+    } catch (e) {
+      msg('❌ Erro ao unir: ' + e.message, false);
+    }
+  }
+
+  // --- 3. JUNTAR FOTOS: MÁXIMO 4 POR PAINEL 2x2 EM JPG NÍTIDO ---
+  function adicionarImagensParaMerge(input) {
+    if (!input.files || input.files.length === 0) return;
+    for (let f of input.files) {
+      imagensParaMerge.push(f);
+    }
+    atualizarVisualizacaoImagensMerge();
+    input.value = '';
+  }
+
+  function atualizarVisualizacaoImagensMerge() {
+    const container = document.getElementById('merge-img-list-container');
+    if (imagensParaMerge.length === 0) {
+      container.innerHTML = '<em>Nenhuma foto adicionada ainda. Escolha a 1ª foto acima.</em>';
+      return;
+    }
+
+    let html = `<strong>Fotos na fila (${imagensParaMerge.length}):</strong><ol>`;
+    imagensParaMerge.forEach((f, idx) => {
+      html += `<li>${f.name} <span class="btn-remove" onclick="removerImagemMerge(${idx})">✖</span></li>`;
+    });
+    html += '</ol>';
+    container.innerHTML = html;
+  }
+
+  function removerImagemMerge(index) {
+    imagensParaMerge.splice(index, 1);
+    atualizarVisualizacaoImagensMerge();
+  }
+
+  function limparListaImagensMerge() {
+    imagensParaMerge = [];
+    atualizarVisualizacaoImagensMerge();
+  }
+
+  // Monta um lote de 1 a 4 imagens num painel 2x2 sem compressão excessiva
+  async function montarPainel4Imagens(imgsLote, nomeArquivo) {
+    return new Promise((resolve) => {
+      const cols = imgsLote.length === 1 ? 1 : 2;
+      const colWidth = Math.max(...imgsLote.map(img => img.naturalWidth));
+      const rows = Math.ceil(imgsLote.length / cols);
+      const rowHeights = [];
+
+      for (let r = 0; r < rows; r++) {
+        let maxH = 0;
+        for (let c = 0; c < cols; c++) {
+          const idx = r * cols + c;
+          if (idx < imgsLote.length) {
+            const img = imgsLote[idx];
+            const h = (colWidth / img.naturalWidth) * img.naturalHeight;
+            if (h > maxH) maxH = h;
+          }
+        }
+        rowHeights.push(maxH);
+      }
+
+      const totalWidth = colWidth * cols;
+      const totalHeight = rowHeights.reduce((acc, v) => acc + v, 0);
+
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(totalWidth);
+      canvas.height = Math.round(totalHeight);
       const ctx = canvas.getContext('2d');
 
-      let yAtual = 0;
-      redimensionadas.forEach(({ img, altura }) => {
-        ctx.drawImage(img, 0, yAtual, larguraMaxima, altura);
-        yAtual += altura;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      let currentY = 0;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const idx = r * cols + c;
+          if (idx < imgsLote.length) {
+            const img = imgsLote[idx];
+            const currentX = c * colWidth;
+            const h = (colWidth / img.naturalWidth) * img.naturalHeight;
+            ctx.drawImage(img, currentX, currentY, colWidth, h);
+          }
+        }
+        currentY += rowHeights[r];
+      }
+
+      // Exportação em formato JPG com qualidade máxima (0.98)
+      canvas.toBlob((blob) => {
+        entregarArquivo(blob, nomeArquivo);
+        resolve();
+      }, 'image/jpeg', 0.98);
+    });
+  }
+
+  async function execMergeImagesAuto4() {
+    if (imagensParaMerge.length < 2) {
+      return msg('Adicione pelo menos 2 fotos para juntar.', false);
+    }
+
+    try {
+      document.getElementById('links-container').innerHTML = '';
+      msg('Carregando imagens e gerando painéis em alta resolução...');
+
+      const loadedImages = await Promise.all(imagensParaMerge.map(file => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = URL.createObjectURL(file);
+        });
+      }));
+
+      // Divide em lotes de no máximo 4 imagens
+      const totalLotes = Math.ceil(loadedImages.length / 4);
+
+      for (let i = 0; i < totalLotes; i++) {
+        const pedaco = loadedImages.slice(i * 4, (i + 1) * 4);
+        const nomeParte = totalLotes === 1 
+          ? 'painel_fotos_hd.jpg' 
+          : `painel_fotos_parte_${i + 1}_de_${totalLotes}.jpg`;
+        
+        await montarPainel4Imagens(pedaco, nomeParte);
+      }
+
+      msg(`✅ Concluído! Gerado(s) ${totalLotes} painel(éis) de 4 fotos em formato JPG nítido.`);
+    } catch (e) {
+      msg('❌ Falha ao processar imagens: ' + e.message, false);
+    }
+  }
+
+  // --- 4. SPLIT ---
+  async function execSplit() {
+    const input = document.getElementById('split-file');
+    const range = document.getElementById('split-pages').value.trim();
+    if (!input.files.length || !range) return msg('Preencha os campos de arquivo e páginas.', false);
+
+    try {
+      msg('Extraindo páginas...');
+      const srcPdf = await PDFLib.PDFDocument.load(await input.files[0].arrayBuffer());
+      const total = srcPdf.getPageCount();
+      const indices = new Set();
+
+      range.split(',').forEach(p => {
+        p = p.trim();
+        if (p.includes('-')) {
+          const [ini, fim] = p.split('-').map(n => parseInt(n.trim(), 10));
+          for (let i = ini; i <= fim; i++) if (i >= 1 && i <= total) indices.add(i - 1);
+        } else {
+          const n = parseInt(p, 10);
+          if (n >= 1 && n <= total) indices.add(n - 1);
+        }
       });
 
-      canvas.style.display = 'block';
-      const link = document.getElementById('downloadLink');
-      link.href = canvas.toDataURL('image/jpeg', 0.92);
-      link.download = 'fotos_unidas.jpg';
-      link.textContent = 'Baixar JPG Unificado';
-      link.style.display = 'inline-block';
+      if (!indices.size) return msg('Nenhuma página válida informada.', false);
+
+      const newPdf = await PDFLib.PDFDocument.create();
+      const pages = await newPdf.copyPages(srcPdf, Array.from(indices));
+      pages.forEach(p => newPdf.addPage(p));
+
+      const bytes = await newPdf.save();
+      entregarArquivo(new Blob([bytes], { type: 'application/pdf' }), 'extraido_' + input.files[0].name);
+      msg('✅ Páginas extraídas com sucesso!');
+    } catch (e) {
+      msg('❌ Erro ao extrair: ' + e.message, false);
     }
-  </script>
+  }
+
+  // --- 5. PDF PARA WORD (.DOC) ---
+  async function execPdfToWord() {
+    const input = document.getElementById('word-file');
+    if (!input.files.length) return msg('Selecione um PDF primeiro.', false);
+
+    try {
+      msg('Extraindo texto e gerando Word...');
+      const buffer = await input.files[0].arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+
+      let htmlDoc = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head><meta charset='utf-8'><title>Documento</title>
+      <style>body{font-family:Arial,sans-serif;line-height:1.5;} p{margin-bottom:12px;} .page{border-bottom:1px dashed #ccc;padding:10px 0;margin-bottom:15px;color:#888;font-size:12px;}</style>
+      </head><body>`;
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+
+        htmlDoc += `<div class='page'>Página ${i}</div>`;
+        htmlDoc += `<p>${pageText.replace(/\n/g, '<br>') || '(Página sem texto)'}</p>`;
+      }
+
+      htmlDoc += `</body></html>`;
+
+      const blob = new Blob(['\ufeff', htmlDoc], { type: 'application/msword' });
+      entregarArquivo(blob, input.files[0].name.replace(/\.pdf$/i, '') + '.doc');
+      msg('✅ Word gerado com sucesso!');
+    } catch (e) {
+      msg('❌ Erro ao converter para Word: ' + e.message, false);
+    }
+  }
+
+  // --- 6. WORD (.DOCX) PARA PDF ---
+  async function execWordToPdf() {
+    const input = document.getElementById('word2pdf-file');
+    if (!input.files.length) return msg('Selecione um arquivo .docx do Word.', false);
+
+    try {
+      msg('Lendo arquivo Word e gerando PDF...');
+      const buffer = await input.files[0].arrayBuffer();
+
+      const result = await mammoth.extractRawText({ arrayBuffer: buffer });
+      let fullText = result.value || '';
+
+      if (!fullText.trim()) {
+        return msg('O arquivo Word está vazio ou contém apenas imagens não processáveis.', false);
+      }
+
+      fullText = fullText
+        .replace(/\t/g, '    ')
+        .replace(/[\u2018\u2019]/g, "'")
+        .replace(/[\u201C\u201D]/g, '"')
+        .replace(/[\u2013\u2014]/g, '-')
+        .replace(/[^\x20-\x7E\xA0-\xFF\n\r]/g, ' ');
+
+      const pdfDoc = await PDFLib.PDFDocument.create();
+      const font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+      const fontSize = 11;
+      const lineHeight = 16;
+      const margin = 40;
+      const pageWidth = 595.28;
+      const pageHeight = 841.89;
+      const maxLineWidth = pageWidth - (margin * 2);
+
+      let page = pdfDoc.addPage([pageWidth, pageHeight]);
+      let currentY = pageHeight - margin;
+
+      const paragraphs = fullText.split(/\r?\n/);
+
+      for (let para of paragraphs) {
+        para = para.trim();
+        if (!para) {
+          currentY -= lineHeight;
+          if (currentY < margin) {
+            page = pdfDoc.addPage([pageWidth, pageHeight]);
+            currentY = pageHeight - margin;
+          }
+          continue;
+        }
+
+        const words = para.split(/\s+/);
+        let currentLine = '';
+
+        for (let word of words) {
+          const testLine = currentLine ? `${currentLine} ${word}` : word;
+          const textWidth = font.widthOfTextAtSize(testLine, fontSize);
+
+          if (textWidth < maxLineWidth) {
+            currentLine = testLine;
+          } else {
+            page.drawText(currentLine, { x: margin, y: currentY, size: fontSize, font, color: PDFLib.rgb(0.1, 0.1, 0.1) });
+            currentY -= lineHeight;
+            if (currentY < margin) {
+              page = pdfDoc.addPage([pageWidth, pageHeight]);
+              currentY = pageHeight - margin;
+            }
+            currentLine = word;
+          }
+        }
+
+        if (currentLine) {
+          page.drawText(currentLine, { x: margin, y: currentY, size: fontSize, font, color: PDFLib.rgb(0.1, 0.1, 0.1) });
+          currentY -= lineHeight;
+          if (currentY < margin) {
+            page = pdfDoc.addPage([pageWidth, pageHeight]);
+            currentY = pageHeight - margin;
+          }
+        }
+      }
+
+      const pdfBytes = await pdfDoc.save();
+      entregarArquivo(new Blob([pdfBytes], { type: 'application/pdf' }), input.files[0].name.replace(/\.docx$/i, '') + '.pdf');
+      msg('✅ PDF criado com sucesso!');
+    } catch (e) {
+      msg('❌ Erro ao converter Word para PDF: ' + e.message, false);
+    }
+  }
+
+  // --- 7. PDF PARA EXCEL (.XLSX) ---
+  async function execPdfToExcel() {
+    const input = document.getElementById('excel-file');
+    if (!input.files.length) return msg('Selecione um PDF primeiro.', false);
+
+    try {
+      msg('Extraindo tabela para Excel...');
+      const buffer = await input.files[0].arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+      const rows = [];
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        let lastY;
+        let currentRow = [];
+
+        for (let item of textContent.items) {
+          if (lastY !== undefined && Math.abs(item.transform[5] - lastY) > 6) {
+            if (currentRow.length) rows.push(currentRow);
+            currentRow = [];
+          }
+          currentRow.push(item.str);
+          lastY = item.transform[5];
+        }
+        if (currentRow.length) rows.push(currentRow);
+      }
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, "Dados");
+
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      entregarArquivo(new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), input.files[0].name.replace(/\.pdf$/i, '') + '.xlsx');
+      msg('✅ Excel gerado com sucesso!');
+    } catch (e) {
+      msg('❌ Erro ao converter para Excel: ' + e.message, false);
+    }
+  }
+
+  // --- 8. IMAGENS ➔ PDF ---
+  async function execImgToPdf() {
+    const input = document.getElementById('img-files');
+    if (!input.files.length) return msg('Selecione ao menos uma imagem.', false);
+
+    try {
+      msg('Juntando imagens em PDF...');
+      const pdfDoc = await PDFLib.PDFDocument.create();
+
+      for (let file of input.files) {
+        const buffer = await file.arrayBuffer();
+        let img;
+        if (file.type === 'image/png' || file.name.match(/\.png$/i)) {
+          img = await pdfDoc.embedPng(buffer);
+        } else {
+          img = await pdfDoc.embedJpg(buffer);
+        }
+        const page = pdfDoc.addPage([img.width, img.height]);
+        page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
+      }
+
+      const bytes = await pdfDoc.save();
+      entregarArquivo(new Blob([bytes], { type: 'application/pdf' }), 'imagens_unidas.pdf');
+      msg('✅ PDF das imagens criado com sucesso!');
+    } catch (e) {
+      msg('❌ Erro ao criar PDF das imagens: ' + e.message, false);
+    }
+  }
+
+  // --- 9. PDF ➔ IMAGENS (JPG) ---
+  async function execPdfToImg() {
+    const input = document.getElementById('pdf2img-file');
+    if (!input.files.length) return msg('Selecione um PDF primeiro.', false);
+
+    try {
+      document.getElementById('links-container').innerHTML = '';
+      msg('Renderizando páginas em JPG...');
+      const buffer = await input.files[0].arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 1.5 });
+        const canvas = document.createElement('canvas');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+        canvas.toBlob((blob) => {
+          entregarArquivo(blob, `pagina_${i}.jpg`);
+        }, 'image/jpeg', 0.95);
+      }
+      msg(`✅ ${pdf.numPages} página(s) convertida(s)!`);
+    } catch (e) {
+      msg('❌ Erro na conversão para imagens: ' + e.message, false);
+    }
+  }
+
+  // --- 10. FORMULÁRIOS ---
+  async function inspectFormFields() {
+    const input = document.getElementById('form-file');
+    const container = document.getElementById('form-fields-container');
+    const saveBtn = document.getElementById('form-save-btn');
+    container.innerHTML = '';
+    saveBtn.style.display = 'none';
+
+    if (!input.files.length) return msg('Selecione um arquivo PDF com formulário.', false);
+
+    try {
+      msg('Lendo campos interativos...');
+      const buffer = await input.files[0].arrayBuffer();
+      currentFormDoc = await PDFLib.PDFDocument.load(buffer);
+      currentFormFileName = input.files[0].name;
+
+      const form = currentFormDoc.getForm();
+      const fields = form.getFields();
+
+      if (!fields.length) {
+        return msg('Este PDF não possui campos de formulário preenchíveis (AcroForm).', false);
+      }
+
+      fields.forEach(field => {
+        const name = field.getName();
+        const div = document.createElement('div');
+        div.className = 'field';
+        div.innerHTML = `<label>${name}:</label><input type="text" id="form_val_${name}" placeholder="Preencher ${name}">`;
+        container.appendChild(div);
+      });
+
+      saveBtn.style.display = 'block';
+      msg(`Detectado(s) ${fields.length} campo(s). Preencha e clique no botão verde.`);
+    } catch (e) {
+      msg('❌ Não foi possível carregar campos deste formulário: ' + e.message, false);
+    }
+  }
+
+  async function execSaveForm() {
+    if (!currentFormDoc) return;
+    try {
+      msg('Gravando respostas...');
+      const form = currentFormDoc.getForm();
+      const fields = form.getFields();
+
+      fields.forEach(field => {
+        const name = field.getName();
+        const el = document.getElementById(`form_val_${name}`);
+        if (el && el.value) {
+          try { field.setText(el.value); } catch(e) {}
+        }
+      });
+
+      const bytes = await currentFormDoc.save();
+      entregarArquivo(new Blob([bytes], { type: 'application/pdf' }), 'preenchido_' + currentFormFileName);
+      msg('✅ Formulário preenchido com sucesso!');
+    } catch (e) {
+      msg('❌ Erro ao salvar formulário: ' + e.message, false);
+    }
+  }
+
+  // --- 11. PROTEGER ---
+  async function execLock() {
+    const input = document.getElementById('lock-file');
+    const pass = document.getElementById('lock-pass').value;
+    if (!input.files.length || !pass) return msg('Arquivo e senha obrigatórios.', false);
+
+    try {
+      msg('Criptografando...');
+      const doc = await PDFLib.PDFDocument.load(await input.files[0].arrayBuffer());
+      await doc.encrypt({ userPassword: pass, ownerPassword: pass });
+      const bytes = await doc.save();
+      entregarArquivo(new Blob([bytes], { type: 'application/pdf' }), 'protegido_' + input.files[0].name);
+      msg('✅ PDF protegido com senha!');
+    } catch (e) {
+      msg('❌ Erro ao proteger: ' + e.message, false);
+    }
+  }
+</script>
+
 </body>
 </html>
