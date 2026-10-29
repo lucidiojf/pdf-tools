@@ -30,7 +30,7 @@
 
     .field { margin-bottom: 12px; }
     label { display: block; font-weight: 600; margin-bottom: 5px; color: #334155; font-size: 0.82rem; }
-    input[type="file"], input[type="text"], input[type="password"] {
+    input[type="file"], input[type="text"], input[type="password"], select {
       width: 100%; padding: 9px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 0.9rem;
     }
 
@@ -58,13 +58,12 @@
       color: white; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 0.9rem;
     }
 
-    /* Lista visual do Merge */
-    .merge-box {
+    .list-box {
       background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
       padding: 10px; margin-bottom: 12px; font-size: 0.85rem; color: #334155;
     }
-    .merge-box ol { margin: 6px 0 0 0; padding-left: 20px; }
-    .merge-box li { margin-bottom: 4px; }
+    .list-box ol { margin: 6px 0 0 0; padding-left: 20px; }
+    .list-box li { margin-bottom: 4px; }
     .btn-remove { color: #dc2626; cursor: pointer; font-weight: bold; margin-left: 6px; }
   </style>
 </head>
@@ -76,7 +75,8 @@
   <!-- Abas de Navegação -->
   <div class="tabs">
     <button class="tab-btn active" onclick="openTab(event, 'tab-unlock')">🔓 Unlock</button>
-    <button class="tab-btn" onclick="openTab(event, 'tab-merge')">📑 Juntar</button>
+    <button class="tab-btn" onclick="openTab(event, 'tab-merge')">📑 Juntar PDF</button>
+    <button class="tab-btn" onclick="openTab(event, 'tab-merge-img')">📐 Juntar Fotos</button>
     <button class="tab-btn" onclick="openTab(event, 'tab-split')">✂️ Dividir</button>
     <button class="tab-btn" onclick="openTab(event, 'tab-word')">📄 PDF ➔ Word</button>
     <button class="tab-btn" onclick="openTab(event, 'tab-word2pdf')">📝 Word ➔ PDF</button>
@@ -100,25 +100,47 @@
     <button class="action btn-blue" onclick="execUnlock()">Desbloquear Documento</button>
   </div>
 
-  <!-- 2. JUNTAR (MERGE CUMULATIVO) -->
+  <!-- 2. JUNTAR PDF (CUMULATIVO) -->
   <div id="tab-merge" class="panel">
     <div class="field">
       <label>Adicionar arquivo PDF (um por um ou vários):</label>
       <input type="file" id="merge-file-input" accept="application/pdf" multiple onchange="adicionarPdfsParaMerge(this)">
     </div>
-
-    <!-- Lista de arquivos que vão sendo adicionados -->
-    <div id="merge-list-container" class="merge-box">
+    <div id="merge-list-container" class="list-box">
       <em>Nenhum PDF adicionado ainda. Escolha o primeiro arquivo acima.</em>
     </div>
-
     <button class="action btn-green" onclick="execMerge()">Juntar Todos os PDFs</button>
     <button type="button" onclick="limparListaMerge()" style="width: 100%; margin-top: 6px; background: none; border: none; color: #dc2626; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
       Limpar lista
     </button>
   </div>
 
-  <!-- 3. DIVIDIR -->
+  <!-- 3. JUNTAR IMAGENS (HORIZONTAL OU VERTICAL) -->
+  <div id="tab-merge-img" class="panel">
+    <div class="field">
+      <label>Adicionar fotos (uma por uma ou várias):</label>
+      <input type="file" id="merge-img-input" accept="image/jpeg, image/png, image/webp" multiple onchange="adicionarImagensParaMerge(this)">
+    </div>
+
+    <div class="field">
+      <label>Como deseja juntar as fotos?</label>
+      <select id="merge-img-direction">
+        <option value="horizontal">↔️ Lado a Lado (Horizontal - Recomendado)</option>
+        <option value="vertical">↕️ De Cima para Baixo (Vertical)</option>
+      </select>
+    </div>
+
+    <div id="merge-img-list-container" class="list-box">
+      <em>Nenhuma foto adicionada ainda. Escolha a 1ª foto acima.</em>
+    </div>
+
+    <button class="action btn-purple" onclick="execMergeImages()">Juntar e Gerar Imagem</button>
+    <button type="button" onclick="limparListaImagensMerge()" style="width: 100%; margin-top: 6px; background: none; border: none; color: #dc2626; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">
+      Limpar lista de fotos
+    </button>
+  </div>
+
+  <!-- 4. DIVIDIR -->
   <div id="tab-split" class="panel">
     <div class="field">
       <label>Arquivo PDF:</label>
@@ -131,7 +153,7 @@
     <button class="action btn-orange" onclick="execSplit()">Extrair Páginas</button>
   </div>
 
-  <!-- 4. PDF PARA WORD (.DOC) -->
+  <!-- 5. PDF PARA WORD (.DOC) -->
   <div id="tab-word" class="panel">
     <div class="field">
       <label>Arquivo PDF para transformar em Word:</label>
@@ -140,7 +162,7 @@
     <button class="action btn-blue" onclick="execPdfToWord()">Exportar para Word (.doc)</button>
   </div>
 
-  <!-- 5. WORD (.DOCX) PARA PDF -->
+  <!-- 6. WORD (.DOCX) PARA PDF -->
   <div id="tab-word2pdf" class="panel">
     <div class="field">
       <label>Arquivo Word (.docx):</label>
@@ -149,7 +171,7 @@
     <button class="action btn-blue" onclick="execWordToPdf()">Converter Word em PDF</button>
   </div>
 
-  <!-- 6. PDF PARA EXCEL -->
+  <!-- 7. PDF PARA EXCEL -->
   <div id="tab-excel" class="panel">
     <div class="field">
       <label>Arquivo PDF tabular:</label>
@@ -158,7 +180,7 @@
     <button class="action btn-green" onclick="execPdfToExcel()">Extrair Dados para Excel (.xlsx)</button>
   </div>
 
-  <!-- 7. IMAGENS ➔ PDF -->
+  <!-- 8. IMAGENS ➔ PDF -->
   <div id="tab-img2pdf" class="panel">
     <div class="field">
       <label>Selecione fotos (JPG, PNG):</label>
@@ -167,7 +189,7 @@
     <button class="action btn-purple" onclick="execImgToPdf()">Criar PDF das Imagens</button>
   </div>
 
-  <!-- 8. PDF ➔ IMAGENS -->
+  <!-- 9. PDF ➔ IMAGENS -->
   <div id="tab-pdf2img" class="panel">
     <div class="field">
       <label>Arquivo PDF:</label>
@@ -176,7 +198,7 @@
     <button class="action btn-purple" onclick="execPdfToImg()">Converter Páginas em Fotos (JPG)</button>
   </div>
 
-  <!-- 9. FORMULÁRIOS PDF -->
+  <!-- 10. FORMULÁRIOS PDF -->
   <div id="tab-form" class="panel">
     <div class="field">
       <label>PDF com Formulário Interativo:</label>
@@ -187,7 +209,7 @@
     <button id="form-save-btn" class="action btn-green" style="display: none;" onclick="execSaveForm()">Salvar PDF Preenchido</button>
   </div>
 
-  <!-- 10. PROTEGER -->
+  <!-- 11. PROTEGER -->
   <div id="tab-lock" class="panel">
     <div class="field">
       <label>Arquivo PDF:</label>
@@ -220,6 +242,7 @@
   let currentFormDoc = null;
   let currentFormFileName = '';
   let arquivosParaMerge = [];
+  let imagensParaMerge = [];
 
   function openTab(evt, tabId) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -326,7 +349,7 @@
     }
   }
 
-  // --- 2. MERGE CUMULATIVO (ADICIONA UM A UM) ---
+  // --- 2. MERGE PDF ---
   function adicionarPdfsParaMerge(input) {
     if (!input.files || input.files.length === 0) return;
     for (let f of input.files) {
@@ -385,7 +408,124 @@
     }
   }
 
-  // --- 3. SPLIT ---
+  // --- 3. JUNTAR FOTOS (HORIZONTAL OU VERTICAL) ---
+  function adicionarImagensParaMerge(input) {
+    if (!input.files || input.files.length === 0) return;
+    for (let f of input.files) {
+      imagensParaMerge.push(f);
+    }
+    atualizarVisualizacaoImagensMerge();
+    input.value = '';
+  }
+
+  function atualizarVisualizacaoImagensMerge() {
+    const container = document.getElementById('merge-img-list-container');
+    if (imagensParaMerge.length === 0) {
+      container.innerHTML = '<em>Nenhuma foto adicionada ainda. Escolha a 1ª foto acima.</em>';
+      return;
+    }
+
+    let html = `<strong>Fotos na fila (${imagensParaMerge.length}):</strong><ol>`;
+    imagensParaMerge.forEach((f, idx) => {
+      html += `<li>${f.name} <span class="btn-remove" onclick="removerImagemMerge(${idx})">✖</span></li>`;
+    });
+    html += '</ol>';
+    container.innerHTML = html;
+  }
+
+  function removerImagemMerge(index) {
+    imagensParaMerge.splice(index, 1);
+    atualizarVisualizacaoImagensMerge();
+  }
+
+  function limparListaImagensMerge() {
+    imagensParaMerge = [];
+    atualizarVisualizacaoImagensMerge();
+  }
+
+  async function execMergeImages() {
+    if (imagensParaMerge.length < 2) {
+      return msg('Adicione pelo menos 2 fotos para juntar.', false);
+    }
+
+    const direction = document.getElementById('merge-img-direction').value;
+
+    try {
+      msg('Processando imagens...');
+
+      const loadedImages = await Promise.all(imagensParaMerge.map(file => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = URL.createObjectURL(file);
+        });
+      }));
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      if (direction === 'horizontal') {
+        // Nivelamento pela altura máxima para não perder resolução
+        const maxHeight = Math.max(...loadedImages.map(img => img.naturalHeight));
+        let totalWidth = 0;
+        const widths = loadedImages.map(img => {
+          const proportionalWidth = (maxHeight / img.naturalHeight) * img.naturalWidth;
+          totalWidth += proportionalWidth;
+          return proportionalWidth;
+        });
+
+        canvas.width = totalWidth;
+        canvas.height = maxHeight;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        let currentX = 0;
+        for (let i = 0; i < loadedImages.length; i++) {
+          const img = loadedImages[i];
+          const w = widths[i];
+          ctx.drawImage(img, currentX, 0, w, maxHeight);
+          currentX += w;
+        }
+      } else {
+        // Alinhamento vertical nivelado pela largura máxima
+        const maxWidth = Math.max(...loadedImages.map(img => img.naturalWidth));
+        let totalHeight = 0;
+        const heights = loadedImages.map(img => {
+          const proportionalHeight = (maxWidth / img.naturalWidth) * img.naturalHeight;
+          totalHeight += proportionalHeight;
+          return proportionalHeight;
+        });
+
+        canvas.width = maxWidth;
+        canvas.height = totalHeight;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        let currentY = 0;
+        for (let i = 0; i < loadedImages.length; i++) {
+          const img = loadedImages[i];
+          const h = heights[i];
+          ctx.drawImage(img, 0, currentY, maxWidth, h);
+          currentY += h;
+        }
+      }
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) return msg('Erro ao compilar a imagem combinada.', false);
+        const prefixo = direction === 'horizontal' ? 'fotos_lado_a_lado' : 'fotos_empilhadas';
+        await entregarArquivo(blob, `${prefixo}.jpg`);
+        msg(`✅ ${imagensParaMerge.length} fotos combinadas com sucesso!`);
+      }, 'image/jpeg', 0.95);
+
+    } catch (e) {
+      msg('❌ Falha ao processar imagens: ' + e.message, false);
+    }
+  }
+
+  // --- 4. SPLIT ---
   async function execSplit() {
     const input = document.getElementById('split-file');
     const range = document.getElementById('split-pages').value.trim();
@@ -421,7 +561,7 @@
     }
   }
 
-  // --- 4. PDF PARA WORD (.DOC) ---
+  // --- 5. PDF PARA WORD (.DOC) ---
   async function execPdfToWord() {
     const input = document.getElementById('word-file');
     if (!input.files.length) return msg('Selecione um PDF primeiro.', false);
@@ -454,7 +594,7 @@
     }
   }
 
-  // --- 5. WORD (.DOCX) PARA PDF ---
+  // --- 6. WORD (.DOCX) PARA PDF ---
   async function execWordToPdf() {
     const input = document.getElementById('word2pdf-file');
     if (!input.files.length) return msg('Selecione um arquivo .docx do Word.', false);
@@ -539,7 +679,7 @@
     }
   }
 
-  // --- 6. PDF PARA EXCEL (.XLSX) ---
+  // --- 7. PDF PARA EXCEL (.XLSX) ---
   async function execPdfToExcel() {
     const input = document.getElementById('excel-file');
     if (!input.files.length) return msg('Selecione um PDF primeiro.', false);
@@ -578,7 +718,7 @@
     }
   }
 
-  // --- 7. IMAGENS ➔ PDF ---
+  // --- 8. IMAGENS ➔ PDF ---
   async function execImgToPdf() {
     const input = document.getElementById('img-files');
     if (!input.files.length) return msg('Selecione ao menos uma imagem.', false);
@@ -606,7 +746,7 @@
     }
   }
 
-  // --- 8. PDF ➔ IMAGENS (JPG) ---
+  // --- 9. PDF ➔ IMAGENS (JPG) ---
   async function execPdfToImg() {
     const input = document.getElementById('pdf2img-file');
     if (!input.files.length) return msg('Selecione um PDF primeiro.', false);
@@ -635,7 +775,7 @@
     }
   }
 
-  // --- 9. FORMULÁRIOS ---
+  // --- 10. FORMULÁRIOS ---
   async function inspectFormFields() {
     const input = document.getElementById('form-file');
     const container = document.getElementById('form-fields-container');
@@ -695,7 +835,7 @@
     }
   }
 
-  // --- 10. PROTEGER ---
+  // --- 11. PROTEGER ---
   async function execLock() {
     const input = document.getElementById('lock-file');
     const pass = document.getElementById('lock-pass').value;
